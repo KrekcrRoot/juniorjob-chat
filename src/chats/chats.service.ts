@@ -1,0 +1,126 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from '../global/user.headers';
+import { Repository } from 'typeorm';
+import { Chat } from './chat.entity';
+import { isUUID } from 'class-validator';
+import { Message } from '../messages/message.entity';
+import { MessageSend } from '../messages/message.socket';
+
+@Injectable()
+export class ChatsService {
+  constructor(
+    @InjectRepository(User, 'main') private usersRepository: Repository<User>,
+    @InjectRepository(Chat, 'chat') private chatsRepository: Repository<Chat>,
+    @InjectRepository(Message, 'chat')
+    private messagesRepository: Repository<Message>,
+  ) {}
+
+  async uuid(chat_uuid: string) {
+    return this.chatsRepository.findOne({
+      where: {
+        uuid: chat_uuid,
+        banned: false,
+      },
+    });
+  }
+
+  async findChat(first_user_uuid: string, second_user_uuid: string) {
+    return this.chatsRepository.findOne({
+      where: [
+        {
+          first_user: first_user_uuid,
+          second_user: second_user_uuid,
+          banned: false,
+        },
+        {
+          first_user: second_user_uuid,
+          second_user: first_user_uuid,
+          banned: false,
+        },
+      ],
+    });
+  }
+
+  async messages(uuid: string) {
+    return this.messagesRepository.find({
+      where: {
+        chat: {
+          uuid: uuid,
+        },
+        banned: false,
+      },
+    });
+  }
+
+  async with(first_uuid: string, second_uuid: string) {
+    const chat = await this.findChat(first_uuid, second_uuid);
+
+    if (!chat) {
+      const initChat = this.chatsRepository.create({
+        first_user: first_uuid,
+        second_user: second_uuid,
+      });
+
+      return this.chatsRepository.save(initChat);
+    }
+
+    return chat;
+  }
+
+  async sendMessage(messageDto: MessageSend) {
+    const chat = await this.chatsRepository.findOne({
+      where: {
+        uuid: messageDto.room_uuid,
+        banned: false,
+      },
+    });
+
+    if (!chat) {
+      return false;
+    }
+
+    const message = this.messagesRepository.create({
+      content: messageDto.body,
+      user: messageDto.from_uuid,
+      chat: chat,
+    });
+
+    return this.messagesRepository.save(message);
+  }
+
+  async findChatByUser(first_user_uuid: string, second_user_uuid: string) {
+    if (
+      !isUUID(first_user_uuid) ||
+      !isUUID(second_user_uuid) ||
+      first_user_uuid == second_user_uuid
+    ) {
+      return false;
+    }
+
+    const partner = await this.usersRepository.findOne({
+      where: {
+        uuid: second_user_uuid,
+        banned: false,
+        deleted: false,
+      },
+    });
+
+    if (!partner) {
+      return false;
+    }
+
+    const chat = await this.findChat(first_user_uuid, second_user_uuid);
+
+    if (!chat) {
+      const initChat = this.chatsRepository.create({
+        first_user: first_user_uuid,
+        second_user: second_user_uuid,
+      });
+
+      return this.chatsRepository.save(initChat);
+    }
+
+    return chat;
+  }
+}

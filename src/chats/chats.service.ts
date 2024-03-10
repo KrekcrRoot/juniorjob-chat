@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../global/user.headers';
 import { Repository } from 'typeorm';
@@ -26,6 +26,10 @@ export class ChatsService {
   }
 
   async findChat(first_user_uuid: string, second_user_uuid: string) {
+    if (first_user_uuid == second_user_uuid) {
+      throw new BadRequestException("You can't chat with yourself");
+    }
+
     return this.chatsRepository.findOne({
       where: [
         {
@@ -122,5 +126,20 @@ export class ChatsService {
     }
 
     return chat;
+  }
+
+  async checkAccess(user_uuid: string, chat_uuid: string) {
+    const chat = await this.chatsRepository.findOne({
+      where: {
+        uuid: chat_uuid,
+        banned: false,
+      },
+    });
+
+    if (!chat) {
+      throw new BadRequestException("This chat doesn't exist");
+    }
+
+    return chat.first_user == user_uuid || chat.second_user == user_uuid;
   }
 }

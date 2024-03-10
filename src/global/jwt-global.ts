@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import * as process from 'process';
+import { config } from 'dotenv';
 
 @Module({
   imports: [
     JwtModule.registerAsync({
       useFactory: () => {
+        config();
         return {
-          secret: 'a',
+          secret: process.env.JWT_SECRET,
           signOptions: {
-            expiresIn: '3d',
+            expiresIn: process.env.JWT_EXPIRES,
           },
         };
       },

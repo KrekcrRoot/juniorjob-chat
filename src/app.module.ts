@@ -11,6 +11,7 @@ import databaseGlobal from './global/database.global';
   imports: [
     ...databaseGlobal,
     ConfigModule.forRoot({
+      envFilePath: ['.env'],
       isGlobal: true,
     }),
     GatewayModule,

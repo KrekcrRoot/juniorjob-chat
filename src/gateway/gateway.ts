@@ -7,8 +7,6 @@ import {
 
 import { Server, Socket } from 'socket.io';
 import { ChatsService } from '../chats/chats.service';
-import { UseGuards } from '@nestjs/common';
-import { AuthGuard } from '../common/guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { Chat } from '../chats/chat.entity';
 import {
@@ -16,6 +14,9 @@ import {
   MessageSend,
   MessageSocket,
 } from '../messages/message.socket';
+import * as process from 'process';
+import { config } from 'dotenv';
+import { Message } from '../messages/message.entity';
 
 export interface ConnectInterface {
   user_uuid: string;
@@ -25,7 +26,10 @@ export interface JwtToken {
   uuid: string;
 }
 
-@WebSocketGateway()
+config();
+const WS_PORT = Number(process.env.WEBSOCKET_PORT) || 443;
+
+@WebSocketGateway(WS_PORT)
 export class WsGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
@@ -37,14 +41,22 @@ export class WsGateway implements OnGatewayConnection {
 
   @SubscribeMessage('message')
   async message(client: Socket, args: string) {
-    const msgDto: MessageNew = JSON.parse(args) as MessageNew;
+    let msgDto: MessageNew;
+    try {
+      msgDto = JSON.parse(args) as MessageNew;
+    } catch (e) {
+      client.emit('debug', { error: 'Message JSON not valid' });
+      return;
+    }
     if (!msgDto.body) {
       client.emit('debug', { error: 'Bad message JSON payload' });
       return;
     }
 
+    const rooms = client.rooms.values();
+    rooms.next();
     const messageSendDto: MessageSend = {
-      room_uuid: client.rooms[1],
+      room_uuid: rooms.next().value,
       from_uuid: client.data.uuid,
       body: msgDto.body,
     };
@@ -77,7 +89,9 @@ export class WsGateway implements OnGatewayConnection {
     ) as JwtToken;
 
     if (!query.user_uuid || !token.uuid) {
-      client.emit('debug', { error: 'Bad gateway param' });
+      client.emit('debug', {
+        error: 'Bad gateway param (user_uuid or jwt token auth)',
+      });
       client.disconnect(true);
       return;
     }

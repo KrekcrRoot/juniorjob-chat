@@ -44,6 +44,20 @@ export class ChatsController {
   @ApiResponse({
     status: HttpStatus.OK,
     type: Chat,
+    isArray: true,
+    description: 'Return chat by uuid',
+  })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Return chat by uuid' })
+  @Get('/my')
+  @UseGuards(AccessTokenGuard)
+  async my(@Req() tokenRequest: TokenRequest) {
+    return this.chatsService.allDialogsByUser(tokenRequest.user.uuid);
+  }
+
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: Chat,
     description: 'Return chat by uuid',
   })
   @ApiBearerAuth()

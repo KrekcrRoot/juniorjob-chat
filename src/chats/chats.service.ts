@@ -142,4 +142,17 @@ export class ChatsService {
 
     return chat.first_user == user_uuid || chat.second_user == user_uuid;
   }
+
+  async allDialogsByUser(user_uuid: string) {
+    return this.chatsRepository.find({
+      where: [
+        {
+          first_user: user_uuid,
+        },
+        {
+          second_user: user_uuid,
+        },
+      ],
+    });
+  }
 }

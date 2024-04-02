@@ -5,6 +5,7 @@ import {
   Get,
   HttpStatus,
   Param,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -77,5 +78,26 @@ export class MessagesController {
       throw new BadRequestException('You are not author of message');
     }
     return this.messagesService.delete(params.uuid);
+  }
+
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: Message,
+    description: 'Read message (if you companion)',
+  })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete message by uuid' })
+  @UseGuards(AccessTokenGuard)
+  @Post('/read/:uuid')
+  async read(@Param() params: UUID, @Req() tokenRequest: TokenRequest) {
+    if (
+      !(await this.messagesService.checkCompanion(
+        tokenRequest.user.uuid,
+        params.uuid,
+      ))
+    ) {
+      throw new BadRequestException('You are not companion of message');
+    }
+    return this.messagesService.read(params.uuid);
   }
 }

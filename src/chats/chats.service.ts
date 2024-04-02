@@ -6,6 +6,7 @@ import { Chat } from './chat.entity';
 import { isUUID } from 'class-validator';
 import { Message } from '../messages/message.entity';
 import { MessageSend } from '../messages/message.socket';
+import { FiltersDto } from './dto/filters.dto';
 
 @Injectable()
 export class ChatsService {
@@ -46,13 +47,27 @@ export class ChatsService {
     });
   }
 
-  async messages(uuid: string) {
+  async messages(uuid: string, filters: FiltersDto) {
+    let page = 0,
+      row = 100;
+
+    if (filters.page !== undefined) page = filters.page;
+    if (filters.row !== undefined) row = filters.row;
+
     return this.messagesRepository.find({
+      skip: page * row,
+      take: row,
       where: {
         chat: {
           uuid: uuid,
         },
         banned: false,
+      },
+      relations: {
+        replied: true,
+      },
+      order: {
+        created_at: 'DESC',
       },
     });
   }
@@ -89,6 +104,24 @@ export class ChatsService {
       user: messageDto.from_uuid,
       chat: chat,
     });
+
+    if (messageDto.reply) {
+      const replied_message = await this.messagesRepository.findOne({
+        where: {
+          uuid: messageDto.reply,
+          chat: {
+            uuid: chat.uuid,
+          },
+          banned: false,
+        },
+      });
+
+      if (!replied_message) {
+        return false;
+      }
+
+      message.replied = replied_message;
+    }
 
     return this.messagesRepository.save(message);
   }

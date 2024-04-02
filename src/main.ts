@@ -8,16 +8,14 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('JuniorJob Chat API')
-    .setDescription(
-      'Заходят как-то аморал, нигилист и циник в бар. А бармен им:\n' +
-        '\n' +
-        '— У нас спиртное только с 18.',
-    )
+    .setDescription('JJ chat Rest API description')
     .setVersion('1.0')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
+
+  app.enableCors({ credentials: true, origin: true });
 
   const PORT = Number(process.env.APP_PORT) || 8081;
   await app.listen(PORT);

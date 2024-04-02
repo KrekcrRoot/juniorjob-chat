@@ -3,7 +3,7 @@ import {
   Controller,
   Get,
   HttpStatus,
-  Param,
+  Param, Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { Chat } from './chat.entity';
 import { Message } from '../messages/message.entity';
+import { FiltersDto } from './dto/filters.dto';
 
 export enum UserRole {
   Applicant = 'applicant',
@@ -48,7 +49,7 @@ export class ChatsController {
     description: 'Return chat by uuid',
   })
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Return chat by uuid' })
+  @ApiOperation({ summary: 'Return your chats' })
   @Get('/my')
   @UseGuards(AccessTokenGuard)
   async my(@Req() tokenRequest: TokenRequest) {
@@ -86,7 +87,11 @@ export class ChatsController {
   @ApiOperation({ summary: 'Return all messages by chat uuid' })
   @UseGuards(AccessTokenGuard)
   @Get('/dialog/:uuid')
-  async messages(@Param() params: UUID, @Req() tokenRequest: TokenRequest) {
+  async messages(
+    @Param() params: UUID,
+    @Req() tokenRequest: TokenRequest,
+    @Query() query: FiltersDto,
+  ) {
     if (
       !(await this.chatsService.checkAccess(
         tokenRequest.user.uuid,
@@ -95,7 +100,7 @@ export class ChatsController {
     ) {
       throw new BadRequestException("You don't have access to this chat");
     }
-    return this.chatsService.messages(params.uuid);
+    return this.chatsService.messages(params.uuid, query);
   }
 
   @ApiResponse({

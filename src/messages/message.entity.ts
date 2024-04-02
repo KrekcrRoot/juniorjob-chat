@@ -27,4 +27,19 @@ export class Message extends Parent {
   })
   @Column()
   user: string;
+
+  @ApiProperty({
+    example: v4(),
+    description: 'UUID of replied message',
+  })
+  @ManyToOne(() => Message, (message) => message.uuid, { nullable: true })
+  @JoinColumn()
+  replied: Message | null;
+
+  @ApiProperty({
+    example: false,
+    description: 'Marker of read message',
+  })
+  @Column({ default: false })
+  read: boolean;
 }

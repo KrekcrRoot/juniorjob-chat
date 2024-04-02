@@ -75,4 +75,45 @@ export class MessagesService {
       message.chat.second_user == user_uuid
     );
   }
+
+  async checkCompanion(user_uuid: string, message_uuid: string) {
+    const message = await this.messagesRepository.findOne({
+      where: {
+        uuid: message_uuid,
+        banned: false,
+      },
+      relations: {
+        chat: true,
+      },
+    });
+
+    if (!message) {
+      throw new BadRequestException("Message doesn't exist");
+    }
+
+    if (message.user == user_uuid) return false;
+
+    return (
+      message.chat.first_user == user_uuid ||
+      message.chat.second_user == user_uuid
+    );
+  }
+
+  async read(message_uuid: string) {
+    const message = await this.messagesRepository.findOne({
+      where: {
+        banned: false,
+        uuid: message_uuid,
+      },
+    });
+
+    if (!message) {
+      throw new BadRequestException("Message doesn't exist");
+    }
+
+    if (message.read) throw new BadRequestException('Message already read');
+
+    message.read = true;
+    return this.messagesRepository.save(message);
+  }
 }
